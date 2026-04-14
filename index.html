@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Carga de Fleteros</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
 
@@ -12,70 +13,59 @@
     <!-- Header -->
     <div class="bg-blue-600 rounded-t-2xl px-6 py-5 text-white">
       <h1 class="text-xl font-bold">Carga de Fleteros</h1>
-      <p class="text-blue-200 text-sm mt-1">Registro de datos de transporte</p>
+      <p class="text-blue-200 text-sm mt-1">Subi tu Excel y los datos se cargan automaticamente</p>
     </div>
 
-    <!-- Formulario -->
-    <form id="formFletero" class="bg-white rounded-b-2xl shadow-lg px-6 py-5 space-y-4">
+    <div class="bg-white rounded-b-2xl shadow-lg px-6 py-5 space-y-4">
 
-      <!-- Fecha de carga -->
-      <div>
-        <label for="fechaCarga" class="block text-sm font-medium text-gray-700 mb-1">Fecha de carga</label>
-        <input type="date" id="fechaCarga" required
-          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+      <!-- Columnas esperadas -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
+        <p class="font-semibold mb-1">El Excel debe tener estas columnas:</p>
+        <p>Fecha de carga | Apellido y Nombre | DNI | Patente Tractor | Patente Semi | Proveedor | CUIT</p>
       </div>
 
-      <!-- Apellido y Nombre -->
-      <div>
-        <label for="apellidoNombre" class="block text-sm font-medium text-gray-700 mb-1">Apellido y Nombre</label>
-        <input type="text" id="apellidoNombre" placeholder="Ej: González Juan" required
-          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+      <!-- Zona de carga -->
+      <div id="dropZone"
+        class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
+        <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        <p class="text-gray-600 font-medium">Toca para seleccionar el archivo Excel</p>
+        <p class="text-gray-400 text-sm mt-1">o arrastralo aca (.xlsx, .xls)</p>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" class="hidden">
       </div>
 
-      <!-- DNI -->
-      <div>
-        <label for="dni" class="block text-sm font-medium text-gray-700 mb-1">DNI</label>
-        <input type="text" id="dni" inputmode="numeric" pattern="[0-9]*" placeholder="Ej: 30123456" required
-          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-      </div>
+      <!-- Nombre del archivo -->
+      <div id="fileInfo" class="hidden text-sm text-gray-600 text-center"></div>
 
-      <!-- Patente Tractor -->
-      <div>
-        <label for="patenteTractor" class="block text-sm font-medium text-gray-700 mb-1">Patente Tractor</label>
-        <input type="text" id="patenteTractor" placeholder="Ej: AB123CD" required
-          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 uppercase focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-      </div>
-
-      <!-- Patente Semi -->
-      <div>
-        <label for="patenteSemi" class="block text-sm font-medium text-gray-700 mb-1">Patente Semi</label>
-        <input type="text" id="patenteSemi" placeholder="Ej: XY456ZW" required
-          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 uppercase focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-      </div>
-
-      <!-- Proveedor -->
-      <div>
-        <label for="proveedor" class="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
-        <input type="text" id="proveedor" placeholder="Nombre del proveedor" required
-          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-      </div>
-
-      <!-- CUIT -->
-      <div>
-        <label for="cuit" class="block text-sm font-medium text-gray-700 mb-1">CUIT</label>
-        <input type="text" id="cuit" inputmode="numeric" placeholder="Ej: 20-30123456-7" required
-          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+      <!-- Preview de datos -->
+      <div id="preview" class="hidden">
+        <h3 class="font-semibold text-gray-700 mb-2">Vista previa (<span id="rowCount"></span> filas)</h3>
+        <div class="overflow-x-auto border rounded-lg">
+          <table class="min-w-full text-xs">
+            <thead class="bg-gray-50">
+              <tr id="previewHead"></tr>
+            </thead>
+            <tbody id="previewBody" class="divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Botón enviar -->
-      <button type="submit" id="btnEnviar"
+      <button type="button" id="btnEnviar" disabled
         class="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-        Enviar datos
+        Enviar datos al Google Sheet
       </button>
+
+      <!-- Barra de progreso -->
+      <div id="progressBar" class="hidden w-full bg-gray-200 rounded-full h-2.5">
+        <div id="progressFill" class="bg-blue-600 h-2.5 rounded-full transition-all" style="width: 0%"></div>
+      </div>
 
       <!-- Mensaje de estado -->
       <div id="mensaje" class="hidden rounded-lg px-4 py-3 text-sm text-center"></div>
-    </form>
+    </div>
   </div>
 
   <script>
@@ -84,35 +74,139 @@
     // ============================================================
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJqsmExTFg7T1x7EnuXHP0ZSpAbbmbK1_gSVo2WF7FoQBmFbucT8L-tS1-M1V16okU/exec';
 
-    // Fecha de hoy como valor default
-    document.getElementById('fechaCarga').valueAsDate = new Date();
+    var filasParaEnviar = [];
 
-    // Uppercase automático para patentes
-    document.getElementById('patenteTractor').addEventListener('input', function () {
-      this.value = this.value.toUpperCase();
-    });
-    document.getElementById('patenteSemi').addEventListener('input', function () {
-      this.value = this.value.toUpperCase();
+    // --- Zona de carga ---
+    var dropZone = document.getElementById('dropZone');
+    var fileInput = document.getElementById('fileInput');
+
+    dropZone.addEventListener('click', function () {
+      fileInput.click();
     });
 
-    // Formateo automático de CUIT (XX-XXXXXXXX-X)
-    document.getElementById('cuit').addEventListener('input', function () {
-      var nums = this.value.replace(/\D/g, '');
-      if (nums.length <= 2) {
-        this.value = nums;
-      } else if (nums.length <= 10) {
-        this.value = nums.slice(0, 2) + '-' + nums.slice(2);
-      } else {
-        this.value = nums.slice(0, 2) + '-' + nums.slice(2, 10) + '-' + nums.slice(10, 11);
+    dropZone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      dropZone.classList.add('border-blue-500', 'bg-blue-50');
+    });
+
+    dropZone.addEventListener('dragleave', function () {
+      dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+    });
+
+    dropZone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+      if (e.dataTransfer.files.length > 0) {
+        procesarArchivo(e.dataTransfer.files[0]);
       }
     });
 
-    // Envío del formulario
-    document.getElementById('formFletero').addEventListener('submit', function (e) {
-      e.preventDefault();
+    fileInput.addEventListener('change', function () {
+      if (fileInput.files.length > 0) {
+        procesarArchivo(fileInput.files[0]);
+      }
+    });
 
+    // --- Leer Excel ---
+    function procesarArchivo(file) {
+      document.getElementById('fileInfo').textContent = 'Archivo: ' + file.name;
+      document.getElementById('fileInfo').classList.remove('hidden');
+
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var workbook = XLSX.read(e.target.result, { type: 'array' });
+        var sheet = workbook.Sheets[workbook.SheetNames[0]];
+        var datos = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        if (datos.length === 0) {
+          mostrarMensaje('El archivo esta vacio o no tiene datos.', 'error');
+          return;
+        }
+
+        // Mapear columnas
+        filasParaEnviar = datos.map(function (row) {
+          var keys = Object.keys(row);
+          return {
+            fechaCarga: formatearFecha(row[keys[0]]),
+            apellidoNombre: String(row[keys[1]] || ''),
+            dni: String(row[keys[2]] || ''),
+            patenteTractor: String(row[keys[3]] || '').toUpperCase(),
+            patenteSemi: String(row[keys[4]] || '').toUpperCase(),
+            proveedor: String(row[keys[5]] || ''),
+            cuit: String(row[keys[6]] || '')
+          };
+        });
+
+        mostrarPreview(datos);
+        document.getElementById('btnEnviar').disabled = false;
+        ocultarMensaje();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function formatearFecha(val) {
+      if (!val) return '';
+      // Si es número (fecha de Excel)
+      if (typeof val === 'number') {
+        var fecha = XLSX.SSF.parse_date_code(val);
+        return fecha.y + '-' + String(fecha.m).padStart(2, '0') + '-' + String(fecha.d).padStart(2, '0');
+      }
+      return String(val);
+    }
+
+    // --- Preview ---
+    function mostrarPreview(datos) {
+      var preview = document.getElementById('preview');
+      var head = document.getElementById('previewHead');
+      var body = document.getElementById('previewBody');
+
+      document.getElementById('rowCount').textContent = datos.length;
+
+      // Headers
+      var columnas = Object.keys(datos[0]);
+      head.innerHTML = '';
+      columnas.forEach(function (col) {
+        var th = document.createElement('th');
+        th.className = 'px-2 py-1.5 text-left font-medium text-gray-600';
+        th.textContent = col;
+        head.appendChild(th);
+      });
+
+      // Filas (max 5 en preview)
+      body.innerHTML = '';
+      var maxPreview = Math.min(datos.length, 5);
+      for (var i = 0; i < maxPreview; i++) {
+        var tr = document.createElement('tr');
+        columnas.forEach(function (col) {
+          var td = document.createElement('td');
+          td.className = 'px-2 py-1.5 text-gray-800';
+          td.textContent = datos[i][col];
+          tr.appendChild(td);
+        });
+        body.appendChild(tr);
+      }
+
+      if (datos.length > 5) {
+        var tr = document.createElement('tr');
+        var td = document.createElement('td');
+        td.colSpan = columnas.length;
+        td.className = 'px-2 py-1.5 text-gray-400 text-center';
+        td.textContent = '... y ' + (datos.length - 5) + ' filas mas';
+        tr.appendChild(td);
+        body.appendChild(tr);
+      }
+
+      preview.classList.remove('hidden');
+    }
+
+    // --- Enviar datos ---
+    document.getElementById('btnEnviar').addEventListener('click', function () {
       if (!SCRIPT_URL) {
-        mostrarMensaje('Falta configurar la URL del Google Apps Script. Ver instrucciones en google-apps-script.js', 'error');
+        mostrarMensaje('Falta configurar la URL del Google Apps Script.', 'error');
+        return;
+      }
+      if (filasParaEnviar.length === 0) {
+        mostrarMensaje('No hay datos para enviar.', 'error');
         return;
       }
 
@@ -120,39 +214,39 @@
       btn.disabled = true;
       btn.textContent = 'Enviando...';
 
-      var datos = {
-        fechaCarga: document.getElementById('fechaCarga').value,
-        dni: document.getElementById('dni').value,
-        apellidoNombre: document.getElementById('apellidoNombre').value,
-        patenteTractor: document.getElementById('patenteTractor').value,
-        patenteSemi: document.getElementById('patenteSemi').value,
-        proveedor: document.getElementById('proveedor').value,
-        cuit: document.getElementById('cuit').value
-      };
+      document.getElementById('progressBar').classList.remove('hidden');
 
       fetch(SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify(datos)
+        body: JSON.stringify({ filas: filasParaEnviar })
       })
         .then(function (res) { return res.json(); })
         .then(function (data) {
           if (data.result === 'ok') {
-            mostrarMensaje('Datos guardados correctamente', 'ok');
-            document.getElementById('formFletero').reset();
-            document.getElementById('fechaCarga').valueAsDate = new Date();
+            document.getElementById('progressFill').style.width = '100%';
+            mostrarMensaje('Se cargaron ' + data.filasAgregadas + ' filas correctamente.', 'ok');
+            filasParaEnviar = [];
+            document.getElementById('preview').classList.add('hidden');
+            document.getElementById('fileInfo').classList.add('hidden');
+            fileInput.value = '';
           } else {
             mostrarMensaje('Error: ' + (data.message || 'respuesta inesperada'), 'error');
           }
         })
         .catch(function (err) {
-          mostrarMensaje('Error de conexión: ' + err.message, 'error');
+          mostrarMensaje('Error de conexion: ' + err.message, 'error');
         })
         .finally(function () {
           btn.disabled = false;
-          btn.textContent = 'Enviar datos';
+          btn.textContent = 'Enviar datos al Google Sheet';
+          setTimeout(function () {
+            document.getElementById('progressBar').classList.add('hidden');
+            document.getElementById('progressFill').style.width = '0%';
+          }, 2000);
         });
     });
 
+    // --- Mensajes ---
     function mostrarMensaje(texto, tipo) {
       var el = document.getElementById('mensaje');
       el.textContent = texto;
@@ -162,10 +256,10 @@
       } else {
         el.classList.add('bg-red-100', 'text-red-800');
       }
-      el.classList.remove('hidden');
-      if (tipo === 'ok') {
-        setTimeout(function () { el.classList.add('hidden'); }, 4000);
-      }
+    }
+
+    function ocultarMensaje() {
+      document.getElementById('mensaje').classList.add('hidden');
     }
   </script>
 
